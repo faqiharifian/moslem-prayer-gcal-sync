@@ -161,7 +161,8 @@ func (p *PrayerTime) ToEvents() []*calendar.Event {
 			prayerTime := data.Timings[timing]
 			startTime := prayerTime.Format(time.RFC3339)
 			endTime := prayerTime.Add(45 * time.Minute).Format(time.RFC3339)
-			if data.Day == time.Friday.String() {
+			if data.Day == time.Friday.String() && timing == "Dhuhr" {
+				timing = time.Friday.String()
 				startTime = prayerTime.Add(-30 * time.Minute).Format(time.RFC3339)
 				endTime = prayerTime.Add(time.Hour).Format(time.RFC3339)
 			}

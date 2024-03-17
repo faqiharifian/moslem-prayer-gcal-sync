@@ -1,7 +1,6 @@
 package config
 
 import (
-	"fmt"
 	"os"
 
 	"github.com/kelseyhightower/envconfig"
@@ -36,7 +35,6 @@ func (c *Config) LoadOauthConfig(filepath string) error {
 
 	c.Oauth2, err = google.ConfigFromJSON(b, calendar.CalendarEventsScope)
 	c.Oauth2.RedirectURL = "http://" + c.Host + constant.CallbackPath
-	fmt.Println(c.Oauth2.RedirectURL)
 	return nil
 }
 

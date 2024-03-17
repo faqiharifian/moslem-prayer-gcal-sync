@@ -37,7 +37,7 @@ func DeletePrayerTimeCmd(ctx context.Context, cfg config.Config) *cobra.Command 
 				fmt.Println("Error: invalid end date, use format: DD-MM-YYYY (eg. 01-03-2024)")
 			}
 
-			fmt.Printf("You are going to delete ALL prayer time from %s to %s. Continue (y/N)? ", startDate, endDate)
+			fmt.Printf("You are going to delete ALL prayer time from %s to %s. Continue (y/N)? ", startDate.Format(constant.DateFormatLayout), endDate.Format(constant.DateFormatLayout))
 			scanner := bufio.NewScanner(os.Stdin)
 			scanner.Scan()
 			answer := scanner.Text()
