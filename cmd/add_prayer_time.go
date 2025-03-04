@@ -3,6 +3,9 @@ package cmd
 import (
 	"context"
 	"fmt"
+	"os"
+	"regexp"
+	"strings"
 
 	"github.com/spf13/cobra"
 	"golang.org/x/oauth2"
@@ -14,6 +17,12 @@ import (
 	"github.com/faqiharifian/moslem-prayer-gcal-sync/server"
 )
 
+var (
+	invalidLineMatcher = []*regexp.Regexp{
+		regexp.MustCompile(`^<!doctype html>.*$`),
+	}
+)
+
 func AddPrayerTimeCmd(ctx context.Context, cfg config.Config) *cobra.Command {
 	var filePath string
 	cmd := &cobra.Command{
@@ -23,7 +32,23 @@ func AddPrayerTimeCmd(ctx context.Context, cfg config.Config) *cobra.Command {
 			credFilePath := cmd.Flag("credentials").Value.String()
 			cfg.LoadOauthConfig(credFilePath)
 
-			prayerTimes, err := prayertime.FromCSV(filePath)
+			// Cleanup invalid line
+			input, err := os.ReadFile(filePath)
+			if err != nil {
+				fmt.Println("Failed to load file: ", err)
+				return
+			}
+			validLines := make([]string, 0)
+			for _, line := range strings.Split(string(input), "\n") {
+				for _, matcher := range invalidLineMatcher {
+					if matcher.Match([]byte(line)) {
+						continue
+					}
+					validLines = append(validLines, line)
+				}
+			}
+
+			prayerTimes, err := prayertime.FromLines(validLines)
 			if err != nil {
 				fmt.Println("Failed to load csv file: ", err)
 				return

@@ -2,6 +2,7 @@ package prayertime
 
 import (
 	"bufio"
+	"bytes"
 	"encoding/csv"
 	"fmt"
 	"os"
@@ -64,6 +65,80 @@ func FromCSV(path string) (*PrayerTime, error) {
 	defer file.Close()
 
 	reader := csv.NewReader(file)
+	records, err := reader.ReadAll()
+	if err != nil {
+		return nil, err
+	}
+
+	if len(records) <= 1 {
+		return nil, fmt.Errorf("the file is empty")
+	}
+
+	headers := map[string]int{}
+	timingsKeys := []string{}
+
+	data := []PrayerTimeData{}
+
+	for i, row := range records {
+		if i == 0 {
+			for j, cell := range row {
+				if strings.HasPrefix(cell, "timings.") {
+					key := strings.TrimPrefix(cell, "timings.")
+					timingsKeys = append(timingsKeys, key)
+					headers[key] = j
+				}
+				if cell == dateHeaderName || cell == timezoneHeaderName || cell == dayHeaderName {
+					headers[cell] = j
+				}
+			}
+			if len(timingsKeys) == 0 || len(headers) < len(timingsKeys)+3 {
+				return nil, fmt.Errorf("missing required columns")
+			}
+			continue
+		}
+
+		dateStr := row[headers[dateHeaderName]]
+		date, err := time.Parse(constant.DateFormatLayout, dateStr)
+		if err != nil {
+			return nil, fmt.Errorf("invalid date: %s, err: %w", dateStr, err)
+		}
+
+		tzStr := row[headers[timezoneHeaderName]]
+		tz, err := time.LoadLocation(tzStr)
+		if err != nil {
+			return nil, err
+		}
+
+		dt := PrayerTimeData{
+			Date:    date,
+			Day:     row[headers[dayHeaderName]],
+			Timings: map[string]time.Time{},
+		}
+
+		for _, key := range timingsKeys {
+			timeStr := dateStr + " " + row[headers[key]]
+			time, err := time.ParseInLocation(timeLayout, timeStr, tz)
+			if err != nil {
+				return nil, fmt.Errorf("invalid time: %s, err: %w", timeStr, err)
+			}
+			dt.Timings[key] = time
+		}
+
+		data = append(data, dt)
+	}
+
+	return &PrayerTime{
+		HeaderIdx:       headers,
+		Records:         records,
+		Data:            data,
+		SelectedTimings: timingsKeys,
+		SelectedDays:    days,
+	}, nil
+}
+
+func FromLines(lines []string) (*PrayerTime, error) {
+	content := strings.Join(lines, "\n")
+	reader := csv.NewReader(bytes.NewBuffer([]byte(content)))
 	records, err := reader.ReadAll()
 	if err != nil {
 		return nil, err
